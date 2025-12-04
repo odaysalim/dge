@@ -21,7 +21,6 @@ def get_llm():
             temperature=CONFIG['openai']['temperature'],
             max_tokens=CONFIG['openai']['max_tokens'],
             timeout=300,
-            verbose=True,
         )
     else:
         # Ollama configuration
@@ -31,7 +30,6 @@ def get_llm():
             temperature=CONFIG['ollama']['temperature'],
             max_tokens=CONFIG['ollama']['max_tokens'],
             timeout=300,
-            verbose=True,
         )
 
 # Initialize the LLM based on configuration

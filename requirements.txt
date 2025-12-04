@@ -14,19 +14,16 @@ llama-index-embeddings-ollama
 openai>=1.0.0
 
 # Agent Framework
-crewai
-crewai-tools
+crewai[tools]>=0.28.0
 
 # Database
 psycopg2-binary
 sqlalchemy
 
 # Document Processing
-docling
 pypdf
 python-docx
 markdown
-sentencepiece
 
 # Retrieval
 rank_bm25

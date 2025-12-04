@@ -1,8 +1,8 @@
 # Core RAG Framework
-llama-index
-llama-index-readers-docling
+llama-index>=0.10.0
 llama-index-vector-stores-postgres
 llama-index-storage-docstore-postgres
+llama-index-readers-file
 
 # LLM Providers
 llama-index-llms-openai
@@ -22,7 +22,10 @@ psycopg2-binary
 sqlalchemy
 
 # Document Processing
-docling-ibm-models[mlx]
+docling
+pypdf
+python-docx
+markdown
 sentencepiece
 
 # Retrieval

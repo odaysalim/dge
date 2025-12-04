@@ -1,24 +1,50 @@
+# Core RAG Framework
 llama-index
 llama-index-readers-docling
-llama-index-embeddings-ollama
-llama-index-llms-ollama
 llama-index-vector-stores-postgres
 llama-index-storage-docstore-postgres
-llama-index-storage-docstore-postgres
-python-dotenv
-psycopg2-binary
+
+# LLM Providers
+llama-index-llms-openai
+llama-index-llms-ollama
+llama-index-embeddings-openai
+llama-index-embeddings-ollama
+
+# OpenAI
+openai>=1.0.0
+
+# Agent Framework
 crewai
 crewai-tools
-ragas
-datasets
+
+# Database
+psycopg2-binary
+sqlalchemy
+
+# Document Processing
+docling-ibm-models[mlx]
+sentencepiece
+
+# Retrieval
 rank_bm25
 llama-index-retrievers-bm25
-#transformers
-#torch
-sentencepiece
-docling-ibm-models[mlx]
-fastapi
-uvicorn
-openinference-instrumentation-crewai
+
+# Evaluation
+ragas
+datasets
+
+# Observability
 arize-phoenix-otel
-openinference-instrumentation-litellm
+openinference-instrumentation-crewai
+openinference-instrumentation-llama-index
+openinference-instrumentation-openai
+
+# API
+fastapi
+uvicorn[standard]
+pydantic
+
+# Utilities
+python-dotenv
+nest-asyncio
+aiohttp

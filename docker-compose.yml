@@ -1,26 +1,101 @@
 version: '3.8'
 
 services:
-  # Your CrewAI RAG API service
-  rag-api:
-    build: . # Build the image from the Dockerfile in the current directory
-    container_name: crewai_rag_api
+  # PostgreSQL with pgvector extension
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: rag_postgres
     environment:
-      # Pass the DATABASE_URL to the API container.
-      # 'host.docker.internal' is a special DNS name that points to the host machine.
-      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@host.docker.internal:${DB_PORT}/${DB_NAME}
+      POSTGRES_DB: ${DB_NAME:-rag_db}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres_password}
+      POSTGRES_INITDB_ARGS: "-E UTF8"
     ports:
-      - "8000:8000"
-    # This allows the container to resolve 'host.docker.internal'
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    restart: always
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - rag-network
 
-  # The OpenWebUI frontend service
+  # Arize Phoenix - Observability & Tracing
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    container_name: arize_phoenix
+    ports:
+      - "${PHOENIX_PORT:-6006}:6006"
+      - "4317:4317"  # OTLP gRPC
+      - "4318:4318"  # OTLP HTTP
+    environment:
+      - PHOENIX_WORKING_DIR=/phoenix-data
+    volumes:
+      - phoenix_data:/phoenix-data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6006/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - rag-network
+
+  # CrewAI RAG API service
+  rag-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: crewai_rag_api
+    env_file:
+      - .env.docker
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password}@postgres:5432/${DB_NAME:-rag_db}
+      - PHOENIX_COLLECTOR_ENDPOINT=http://phoenix:6006
+      - PHOENIX_HOST=phoenix
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      phoenix:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - rag-network
+    volumes:
+      - ./data:/app/data
+
+  # OpenWebUI frontend service
   open-webui:
     image: ghcr.io/open-webui/open-webui:main
     container_name: open-webui
     ports:
       - "3000:8080"
+    environment:
+      - OPENAI_API_BASE_URL=http://rag-api:8000/v1
+      - OPENAI_API_KEY=dummy  # Dummy key, not used but required by OpenWebUI
+      - WEBUI_AUTH=false  # Disable authentication for local development
     volumes:
-      - o
+      - open-webui-data:/app/backend/data
+    depends_on:
+      - rag-api
+    restart: unless-stopped
+    networks:
+      - rag-network
+
+volumes:
+  postgres_data:
+    driver: local
+  phoenix_data:
+    driver: local
+  open-webui-data:
+    driver: local
+
+networks:
+  rag-network:
+    driver: bridge

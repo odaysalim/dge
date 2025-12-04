@@ -85,6 +85,8 @@ docker-compose.override.yml
 # Temporary files
 *.tmp
 *.temp
+*.backup
+*.bak
 
 # Model files
 *.bin

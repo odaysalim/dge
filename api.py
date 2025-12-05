@@ -75,6 +75,54 @@ def is_greeting_or_chitchat(message: str) -> bool:
     return False
 
 
+def is_openwebui_system_request(message: str) -> tuple[bool, str]:
+    """
+    Detect OpenWebUI system requests (title generation, follow-ups, etc.)
+    Returns (is_system_request, response_type)
+    """
+    msg_lower = message.lower()
+
+    # Title generation request
+    if "generate a concise" in msg_lower and "title" in msg_lower:
+        return True, "title"
+
+    # Follow-up suggestions request
+    if "follow-up" in msg_lower and "questions" in msg_lower:
+        return True, "followups"
+
+    # Tags generation
+    if "generate tags" in msg_lower or "extract tags" in msg_lower:
+        return True, "tags"
+
+    return False, ""
+
+
+def get_openwebui_system_response(response_type: str, message: str) -> str:
+    """Generate appropriate response for OpenWebUI system requests."""
+    import json
+
+    if response_type == "title":
+        # Extract topic from chat history if present
+        if "<chat_history>" in message:
+            # Simple title based on context
+            return json.dumps({"title": "📄 Document Query"})
+        return json.dumps({"title": "💬 New Chat"})
+
+    if response_type == "followups":
+        return json.dumps({
+            "follow_ups": [
+                "What is the annual leave policy?",
+                "How do I submit a purchase requisition?",
+                "What are the password requirements?"
+            ]
+        })
+
+    if response_type == "tags":
+        return json.dumps({"tags": ["documents", "policies", "rag"]})
+
+    return ""
+
+
 def get_greeting_response(message: str) -> str:
     """Generate a friendly response for greetings without using RAG."""
     msg_lower = message.lower().strip()
@@ -222,6 +270,33 @@ async def chat_completions(request: ChatCompletionRequest):
             raise HTTPException(status_code=400, detail="No user message found")
 
         logging.info(f"Received query: {user_message[:100]}...")
+
+        # Check for OpenWebUI system requests (title generation, follow-ups, etc.)
+        is_system_req, req_type = is_openwebui_system_request(user_message)
+        if is_system_req:
+            logging.info(f"Detected OpenWebUI system request: {req_type}")
+            answer = get_openwebui_system_response(req_type, user_message)
+
+            import time
+            return {
+                "id": f"chatcmpl-{uuid4().hex[:8]}",
+                "object": "chat.completion",
+                "created": int(time.time()),
+                "model": request.model,
+                "choices": [{
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": answer,
+                    },
+                    "finish_reason": "stop"
+                }],
+                "usage": {
+                    "prompt_tokens": len(user_message.split()),
+                    "completion_tokens": len(answer.split()),
+                    "total_tokens": len(user_message.split()) + len(answer.split())
+                }
+            }
 
         # Check for greetings/chitchat - respond directly without RAG
         if is_greeting_or_chitchat(user_message):

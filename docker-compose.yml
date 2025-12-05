@@ -57,6 +57,9 @@ services:
       - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password}@postgres:5432/${DB_NAME:-rag_db}
       - PHOENIX_COLLECTOR_ENDPOINT=http://phoenix:6006
       - PHOENIX_HOST=phoenix
+      # Disable CrewAI interactive prompts that block the API
+      - CREWAI_TELEMETRY_OPT_OUT=true
+      - CREWAI_TRACING_ENABLED=false
     ports:
       - "${API_PORT:-8000}:8000"
     depends_on:

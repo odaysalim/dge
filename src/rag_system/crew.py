@@ -1,3 +1,8 @@
+import os
+# Ensure telemetry is disabled before CrewAI runs
+os.environ["CREWAI_TELEMETRY_OPT_OUT"] = "true"
+os.environ["CREWAI_TRACING_ENABLED"] = "false"
+
 from crewai import Crew, Process, Task
 from .agents import query_router, document_researcher, insight_synthesizer
 
@@ -59,7 +64,8 @@ The response should feel conversational yet authoritative, avoiding repetitive h
         agents=[query_router, document_researcher, insight_synthesizer],
         tasks=[routing_task, research_task, synthesis_task],
         process=Process.sequential,  # The tasks will be executed one after the other
-        verbose=True
+        verbose=False,  # Disable verbose to prevent interactive prompts
+        tracing=False   # Disable tracing to prevent 20s timeout prompt
     )
 
     return rag_crew

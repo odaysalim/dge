@@ -26,8 +26,11 @@ RUN uv pip install --no-cache-dir -r requirements.txt
 # Copy the rest of your application's code into the container
 COPY . .
 
+# Make entrypoint script executable
+RUN chmod +x docker-entrypoint.sh
+
 # Make port 8000 available to the world outside this container
 EXPOSE 8000
 
-# Run api.py when the container launches
-CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run entrypoint script which disables tracing then starts the API
+ENTRYPOINT ["./docker-entrypoint.sh"]

@@ -68,6 +68,36 @@ def query_router_tool(query: Union[str, Dict[str, Any]]) -> str:
     query_lower = search_query.lower()
 
     # ===========================================
+    # STEP 0: Check for greetings/chitchat (skip retrieval)
+    # ===========================================
+
+    greetings = [
+        "hi", "hello", "hey", "good morning", "good afternoon", "good evening",
+        "howdy", "greetings", "what's up", "whats up", "sup", "yo"
+    ]
+
+    chitchat_patterns = [
+        "how are you", "how r u", "how do you do", "nice to meet",
+        "thank you", "thanks", "bye", "goodbye", "see you", "take care",
+        "who are you", "what are you", "what can you do", "help me"
+    ]
+
+    # Check if it's just a greeting (short message with greeting word)
+    words = query_lower.split()
+    is_greeting = (
+        len(words) <= 3 and any(g in query_lower for g in greetings)
+    ) or any(pattern in query_lower for pattern in chitchat_patterns)
+
+    if is_greeting:
+        result = {
+            "route": "general",
+            "justification": "This is a greeting or general chitchat - no document retrieval needed.",
+            "query": search_query
+        }
+        print(f"DEBUG [Router]: Detected greeting/chitchat. Skipping document retrieval.")
+        return json.dumps(result, indent=2)
+
+    # ===========================================
     # STEP 1: Identify the topic/domain
     # ===========================================
 

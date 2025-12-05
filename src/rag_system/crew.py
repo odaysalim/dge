@@ -64,7 +64,8 @@ The response should feel conversational yet authoritative, avoiding repetitive h
         agents=[query_router, document_researcher, insight_synthesizer],
         tasks=[routing_task, research_task, synthesis_task],
         process=Process.sequential,  # The tasks will be executed one after the other
-        verbose=False  # Disable verbose to prevent interactive prompts
+        verbose=False,  # Disable verbose to prevent interactive prompts
+        tracing=False   # Disable tracing to prevent 20s timeout prompt
     )
 
     return rag_crew

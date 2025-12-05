@@ -221,36 +221,54 @@ async def list_models():
     """
     OpenAI-compatible endpoint to list available models.
     Required for OpenWebUI integration.
+    Includes common model aliases so OpenWebUI can use them for title generation etc.
     """
     provider_info = f"({LLM_PROVIDER})" if LLM_PROVIDER else ""
+    max_tokens = CONFIG['openai']['max_tokens'] if LLM_PROVIDER == 'openai' else CONFIG['ollama']['max_tokens']
 
-    return {
-        "object": "list",
-        "data": [
-            {
-                "id": "agentic-rag",
-                "object": "model",
-                "created": 1677652288,
-                "owned_by": f"agentic-rag-{LLM_PROVIDER}",
-                "permission": [],
-                "root": "agentic-rag",
-                "parent": None,
-                "max_tokens": CONFIG['openai']['max_tokens'] if LLM_PROVIDER == 'openai' else CONFIG['ollama']['max_tokens'],
-                "description": f"Agentic RAG with CrewAI {provider_info}"
-            },
-            {
-                "id": "agentic-rag-memory",
-                "object": "model",
-                "created": 1677652288,
-                "owned_by": f"agentic-rag-{LLM_PROVIDER}",
-                "permission": [],
-                "root": "agentic-rag-memory",
-                "parent": None,
-                "max_tokens": CONFIG['openai']['max_tokens'] if LLM_PROVIDER == 'openai' else CONFIG['ollama']['max_tokens'],
-                "description": f"Agentic RAG with conversation memory {provider_info}"
-            }
-        ]
-    }
+    # Base models
+    models = [
+        {
+            "id": "agentic-rag",
+            "object": "model",
+            "created": 1677652288,
+            "owned_by": f"agentic-rag-{LLM_PROVIDER}",
+            "permission": [],
+            "root": "agentic-rag",
+            "parent": None,
+            "max_tokens": max_tokens,
+            "description": f"Agentic RAG with CrewAI {provider_info}"
+        },
+        {
+            "id": "agentic-rag-memory",
+            "object": "model",
+            "created": 1677652288,
+            "owned_by": f"agentic-rag-{LLM_PROVIDER}",
+            "permission": [],
+            "root": "agentic-rag-memory",
+            "parent": None,
+            "max_tokens": max_tokens,
+            "description": f"Agentic RAG with conversation memory {provider_info}"
+        }
+    ]
+
+    # Add common model aliases for OpenWebUI compatibility
+    # OpenWebUI uses these for title generation, tags, etc.
+    common_aliases = ["gpt-4", "gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo", "gpt-4-turbo"]
+    for alias in common_aliases:
+        models.append({
+            "id": alias,
+            "object": "model",
+            "created": 1677652288,
+            "owned_by": "agentic-rag",
+            "permission": [],
+            "root": alias,
+            "parent": None,
+            "max_tokens": max_tokens,
+            "description": f"Alias for Agentic RAG {provider_info}"
+        })
+
+    return {"object": "list", "data": models}
 
 
 @app.post("/v1/chat/completions")

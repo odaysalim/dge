@@ -19,7 +19,14 @@ def create_rag_crew(query: str):
     # Task 2: Retrieve documents using routing information
     # This task receives the routing decision from Task 1
     research_task = Task(
-        description=f"Using the routing decision from {routing_task}, find relevant information in the policy and standards documents for the query: '{query}'.",
+        description=(
+            f"You received a routing decision from the Query Router. Now you MUST:\n"
+            f"1. Use the Document Retrieval Tool to search for: '{query}'\n"
+            f"2. Pass the routing decision JSON from {routing_task} as the 'routing_info' parameter\n"
+            f"3. Return ONLY the document chunks retrieved by the tool\n\n"
+            f"DO NOT return the routing JSON. DO NOT skip calling the tool. "
+            f"Your job is to retrieve document chunks using the tool."
+        ),
         expected_output="A block of text containing chunks of the most relevant document sections and their source file names.",
         agent=document_researcher,
         context=[routing_task]  # Uses output from routing_task

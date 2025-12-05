@@ -389,32 +389,29 @@ def document_retrieval_tool(query: Union[str, Dict[str, Any]], routing_info: Opt
             content = node.get_content()
 
             # Extract source file information from metadata
-            source_info = "Unknown source"
+            file_name = "Unknown source"
+            page_num = ""
             context_info = ""
-            page_info = ""
 
             if hasattr(node, 'metadata') and node.metadata:
                 # File information
                 file_name = node.metadata.get('source_file', node.metadata.get('file_name', 'Unknown file'))
                 file_path = node.metadata.get('file_path', '')
                 if file_path:
-                    source_info = f"Source: {os.path.basename(file_path)}"
-                    sources_seen.add(os.path.basename(file_path))
-                else:
-                    source_info = f"Source: {file_name}"
-                    sources_seen.add(file_name)
+                    file_name = os.path.basename(file_path)
+                sources_seen.add(file_name)
+
+                # Page number information (if available)
+                page_num = node.metadata.get('page_number', node.metadata.get('page_label', ''))
 
                 # Contextual information (if available from contextual RAG)
                 context = node.metadata.get('context', '')
                 if context:
-                    context_info = f"\nContext: {context}"
+                    context_info = f"**Section Context:** {context}\n"
 
-                # Page number information (if available)
-                page_num = node.metadata.get('page_number', '')
-                if page_num:
-                    page_info = f" (Page {page_num})"
-
-            formatted_chunk = f"**Document Chunk {i}**\n{source_info}{page_info}{context_info}\n\nContent:\n{content}"
+            # Format chunk with clear, extractable source info (no "Document Chunk X")
+            page_line = f"**Page:** {page_num}\n" if page_num else ""
+            formatted_chunk = f"---\n**Source:** {file_name}\n{page_line}{context_info}\n{content}\n---"
             formatted_chunks.append(formatted_chunk)
 
         context = "\n\n" + "="*50 + "\n\n".join(formatted_chunks)

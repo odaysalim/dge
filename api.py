@@ -47,6 +47,58 @@ from src.rag_system.crew import create_rag_crew
 from src.rag_system.memory import create_session_memory, get_global_memory
 from src.config.settings import CONFIG, LLM_PROVIDER
 
+
+def is_greeting_or_chitchat(message: str) -> bool:
+    """Check if a message is a greeting or chitchat that doesn't need RAG."""
+    msg_lower = message.lower().strip()
+    words = msg_lower.split()
+
+    greetings = [
+        "hi", "hello", "hey", "good morning", "good afternoon", "good evening",
+        "howdy", "greetings", "what's up", "whats up", "sup", "yo"
+    ]
+
+    chitchat_patterns = [
+        "how are you", "how r u", "how do you do", "nice to meet",
+        "thank you", "thanks", "bye", "goodbye", "see you", "take care",
+        "who are you", "what are you", "what can you do"
+    ]
+
+    # Short greeting (1-3 words with greeting word)
+    if len(words) <= 3 and any(g in msg_lower for g in greetings):
+        return True
+
+    # Chitchat patterns
+    if any(pattern in msg_lower for pattern in chitchat_patterns):
+        return True
+
+    return False
+
+
+def get_greeting_response(message: str) -> str:
+    """Generate a friendly response for greetings without using RAG."""
+    msg_lower = message.lower().strip()
+
+    if any(g in msg_lower for g in ["hi", "hello", "hey", "howdy", "greetings"]):
+        return "Hello! I'm your document assistant. I can help you find information about HR policies, procurement procedures, and information security guidelines. What would you like to know?"
+
+    if "how are you" in msg_lower:
+        return "I'm doing well, thank you for asking! I'm ready to help you find information in your documents. What can I look up for you?"
+
+    if any(g in msg_lower for g in ["thank", "thanks"]):
+        return "You're welcome! Let me know if you have any other questions."
+
+    if any(g in msg_lower for g in ["bye", "goodbye", "see you"]):
+        return "Goodbye! Feel free to come back anytime you need help with document queries."
+
+    if "who are you" in msg_lower or "what are you" in msg_lower:
+        return "I'm an AI document assistant powered by a RAG (Retrieval-Augmented Generation) system. I can search through HR policies, procurement manuals, and security guidelines to answer your questions with accurate source citations."
+
+    if "what can you do" in msg_lower:
+        return "I can help you find information from:\n- **HR Bylaws**: Leave policies, benefits, employee regulations\n- **Procurement Manuals**: Business processes, SAP Ariba system, Abu Dhabi standards\n- **Information Security**: Security policies and guidelines\n\nJust ask me a question about any of these topics!"
+
+    return "Hello! How can I help you today? Feel free to ask me about HR policies, procurement procedures, or information security guidelines."
+
 # Initialize FastAPI app
 app = FastAPI(
     title="Agentic RAG API",
@@ -170,6 +222,32 @@ async def chat_completions(request: ChatCompletionRequest):
             raise HTTPException(status_code=400, detail="No user message found")
 
         logging.info(f"Received query: {user_message[:100]}...")
+
+        # Check for greetings/chitchat - respond directly without RAG
+        if is_greeting_or_chitchat(user_message):
+            logging.info("Detected greeting/chitchat - responding directly")
+            answer = get_greeting_response(user_message)
+
+            import time
+            return {
+                "id": f"chatcmpl-{uuid4().hex[:8]}",
+                "object": "chat.completion",
+                "created": int(time.time()),
+                "model": request.model,
+                "choices": [{
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": answer,
+                    },
+                    "finish_reason": "stop"
+                }],
+                "usage": {
+                    "prompt_tokens": len(user_message.split()),
+                    "completion_tokens": len(answer.split()),
+                    "total_tokens": len(user_message.split()) + len(answer.split())
+                }
+            }
 
         # Handle conversation memory
         use_memory = "memory" in request.model.lower() or request.session_id

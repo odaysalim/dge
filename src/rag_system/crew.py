@@ -1,19 +1,28 @@
 from crewai import Crew, Process, Task
-from .agents import document_researcher, insight_synthesizer
+from .agents import query_router, document_researcher, insight_synthesizer
 
 def create_rag_crew(query: str):
     """
-    Creates and configures a two-agent RAG crew to process a query.
-    - The Document Researcher finds relevant information.
+    Creates and configures a three-agent RAG crew to process a query.
+    - The Query Router analyzes the query and determines which documents to search.
+    - The Document Researcher finds relevant information using the routing decision.
     - The Insight Synthesizer formulates the final answer based on the retrieved context.
     """
 
-    # Task for the Document Researcher agent
-    # This task focuses exclusively on using the tool to find information.
+    # Task 1: Route the query to appropriate documents
+    routing_task = Task(
+        description=f"Analyze this query and determine which document set(s) should be searched: '{query}'.",
+        expected_output="JSON object with routing decision containing 'route' and 'justification' fields.",
+        agent=query_router
+    )
+
+    # Task 2: Retrieve documents using routing information
+    # This task receives the routing decision from Task 1
     research_task = Task(
-        description=f"Find relevant information in the policy and standards documents for the query: '{query}'.",
+        description=f"Using the routing decision from {routing_task}, find relevant information in the policy and standards documents for the query: '{query}'.",
         expected_output="A block of text containing chunks of the most relevant document sections and their source file names.",
-        agent=document_researcher
+        agent=document_researcher,
+        context=[routing_task]  # Uses output from routing_task
     )
 
     # Task for the Insight Synthesizer agent
@@ -38,10 +47,11 @@ The response should feel conversational yet authoritative, avoiding repetitive h
     )
 
     # Create the crew with a sequential process
+    # The workflow: Router → Document Researcher → Insight Synthesizer
     rag_crew = Crew(
-        agents=[document_researcher, insight_synthesizer],
-        tasks=[research_task, synthesis_task],
-        process=Process.sequential, # The tasks will be executed one after the other
+        agents=[query_router, document_researcher, insight_synthesizer],
+        tasks=[routing_task, research_task, synthesis_task],
+        process=Process.sequential,  # The tasks will be executed one after the other
         verbose=True
     )
 

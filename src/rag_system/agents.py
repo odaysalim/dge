@@ -5,7 +5,7 @@ Supports both OpenAI and Ollama providers.
 
 import os
 from crewai import Agent, LLM
-from .tools import document_retrieval_tool
+from .tools import query_router_tool, document_retrieval_tool
 from ..config.settings import CONFIG, LLM_PROVIDER
 
 def get_llm():
@@ -35,6 +35,38 @@ def get_llm():
 # Initialize the LLM based on configuration
 llm = get_llm()
 
+# --- AGENT 0: Query Router ---
+# This agent analyzes the query and determines which documents to search
+query_router = Agent(
+    role='Query Router',
+    goal='Analyze user queries and route them to the appropriate document set for optimal retrieval.',
+    backstory=(
+        "You are a routing specialist who understands the structure of our document repository.\n"
+        "Your expertise lies in quickly analyzing queries to determine the best document sources.\n\n"
+
+        "DOCUMENT TYPES:\n"
+        "- **SAP Ariba Aligned Manual**: Contains system-specific instructions for using SAP Ariba\n"
+        "  (e.g., 'How do I create a sourcing project in Ariba?', 'Steps to publish contract in system')\n"
+        "- **Business Process Manual**: Contains general procurement policies and workflows\n"
+        "  (e.g., 'What is the approval process?', 'Procurement roles and responsibilities')\n"
+        "- **Both**: Use when query is ambiguous or benefits from both perspectives\n\n"
+
+        "YOUR TASK:\n"
+        "1) Use the Query Router Tool to analyze the query\n"
+        "2) Return ONLY the JSON output from the tool - do not add commentary\n"
+        "3) The routing decision will be used by the Document Researcher\n\n"
+
+        "DO NOT retrieve documents yourself.\n"
+        "DO NOT answer the query.\n"
+        "ONLY provide the routing decision in JSON format."
+    ),
+    tools=[query_router_tool],
+    llm=llm,
+    verbose=True,
+    allow_delegation=False,
+    max_iter=2,  # Quick routing decision
+)
+
 # --- AGENT 1: Document Researcher ---
 # This agent's sole purpose is to retrieve relevant information using the retrieval tool
 document_researcher = Agent(
@@ -42,9 +74,15 @@ document_researcher = Agent(
     goal='Use the Document Retrieval Tool to find information relevant to a user\'s query from the knowledge base.',
     backstory=(
         "You are an information retrieval specialist. Your role is strictly limited to:\n"
-        "1) Analyze the user's query to understand intent\n"
-        "2) Retrieve relevant text chunks using the Document Retrieval Tool\n"
+        "1) Receive routing information from the Query Router (if provided)\n"
+        "2) Use the Document Retrieval Tool with the routing information to retrieve relevant chunks\n"
         "3) Return only the raw retrieved context - no interpretation or answers\n\n"
+
+        "ROUTING INFORMATION:\n"
+        "- You may receive routing information in JSON format from the Query Router\n"
+        "- Pass this routing info to the Document Retrieval Tool as the 'routing_info' parameter\n"
+        "- This helps filter documents to only the most relevant sources\n\n"
+
         "DO NOT answer questions using your general knowledge.\n"
         "DO NOT provide explanations, summaries, or interpretations.\n"
         "ONLY return the exact text chunks retrieved from the tool for the next agent to use."

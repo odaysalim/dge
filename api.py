@@ -4,6 +4,13 @@ Provides OpenAI-compatible API with conversation memory and observability.
 """
 
 import os
+
+# CRITICAL: Disable CrewAI telemetry BEFORE any CrewAI imports
+# This prevents interactive prompts that block API responses
+os.environ["CREWAI_TELEMETRY_OPT_OUT"] = "true"
+os.environ["CREWAI_TRACING_ENABLED"] = "false"
+os.environ["OTEL_SDK_DISABLED"] = "true"
+
 import logging
 from typing import List, Dict, Optional
 from uuid import uuid4

@@ -276,12 +276,17 @@ def ingest_documents():
 
         # Create index and store embeddings
         logger.info("Creating embeddings and storing in vector database...")
-        index = VectorStoreIndex(
-            nodes=all_nodes,
+
+        # Create index from existing vector store (empty)
+        index = VectorStoreIndex.from_vector_store(
             vector_store=vector_store,
-            embed_model=embed_model,
-            show_progress=True
+            embed_model=embed_model
         )
+
+        # Explicitly insert nodes into the vector store
+        logger.info(f"Inserting {len(all_nodes)} nodes into vector store...")
+        index.insert_nodes(all_nodes, show_progress=True)
+        logger.info("✅ Nodes inserted successfully")
 
         logger.info(f"""
 ╔══════════════════════════════════════════════════════════════╗

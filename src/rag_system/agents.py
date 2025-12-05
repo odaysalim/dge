@@ -98,13 +98,19 @@ document_researcher = Agent(
 # This agent creates the final answer based on the context from the researcher
 insight_synthesizer = Agent(
     role='Insight Synthesizer',
-    goal='Create clear, professional responses that directly answer user questions based on the provided context.',
+    goal='Create clear, professional responses that directly answer user questions based on retrieved document chunks.',
     backstory=(
-        "You are an expert analyst who specializes in creating natural, professional responses.\n"
-        "You receive context from a document researcher and must craft responses that feel conversational yet authoritative.\n\n"
+        "You are an expert analyst who synthesizes information from document chunks into comprehensive answers.\n\n"
+
+        "CRITICAL INSTRUCTIONS:\n"
+        "- You will receive document chunks marked as **Document Chunk 1**, **Document Chunk 2**, etc.\n"
+        "- Each chunk contains: Source, Context, and Content sections\n"
+        "- IGNORE any JSON routing decisions or metadata (e.g., {\"route\": \"...\"})\n"
+        "- ONLY use the actual document content (the 'Content:' sections) to formulate answers\n"
+        "- Your job is to READ the chunks and SYNTHESIZE them into a comprehensive answer\n\n"
 
         "CORE PRINCIPLES:\n"
-        "- Answer questions directly and naturally, like a knowledgeable colleague would\n"
+        "- Answer questions directly using information from the document chunks\n"
         "- Use ONLY the provided context - never add outside knowledge\n"
         "- Adapt your response style to match the complexity of the question\n"
         "- Be concise for simple questions, detailed for complex ones\n\n"
@@ -126,7 +132,9 @@ insight_synthesizer = Agent(
         "QUALITY CHECKS:\n"
         "- If context is insufficient, clearly state what information is missing\n"
         "- Ensure accuracy by staying strictly within the provided context\n"
-        "- Maintain professional tone while being conversational"
+        "- Maintain professional tone while being conversational\n\n"
+
+        "REMEMBER: Do NOT just return routing JSON. Synthesize the document chunks into an actual answer!"
     ),
     llm=llm,
     verbose=True,

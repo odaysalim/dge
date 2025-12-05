@@ -1,55 +1,117 @@
-# Agentic RAG System
+# Agentic RAG System (Open Source Edition)
 
-A production-ready Retrieval-Augmented Generation system powered by **multi-agent AI orchestration**. Three specialized AI agents work together to understand queries, retrieve relevant documents, and synthesize accurate answers with source citations.
+A production-ready Retrieval-Augmented Generation system powered by **multi-agent AI orchestration** using 100% open-source components. Three specialized AI agents work together to understand queries, retrieve relevant documents, and synthesize accurate answers with source citations.
+
+---
+
+## Key Features
+
+- **Fully Open Source**: Ollama + Llama 3.2 + mxbai-embed-large (no API keys required)
+- **Multi-Agent Orchestration**: CrewAI-powered workflow with 3 specialized agents
+- **Contextual RAG**: Anthropic-style chunk enrichment for better retrieval
+- **Hybrid Search**: Semantic + BM25 keyword search
+- **Docling Integration**: Superior PDF/document processing
+- **RAGAs Evaluation**: Built-in evaluation framework
+- **Phoenix Observability**: Complete tracing and prompt management
+- **OpenWebUI**: Beautiful chat interface
 
 ---
 
 ## Table of Contents
 
+- [Architecture](#architecture)
 - [How It Works](#how-it-works)
 - [The Three Agents](#the-three-agents)
-- [Workflow Steps](#workflow-steps)
-- [Architecture](#architecture)
 - [Quick Start](#quick-start)
+- [Document Ingestion](#document-ingestion)
 - [API Reference](#api-reference)
+- [Evaluation](#evaluation)
 - [Configuration](#configuration)
 - [Project Structure](#project-structure)
 
 ---
 
+## Architecture
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│                         USER INTERFACES                                   │
+│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐       │
+│  │    OpenWebUI    │    │   REST Client   │    │       CLI       │       │
+│  │  localhost:3000 │    │    (curl/etc)   │    │    main.py      │       │
+│  └────────┬────────┘    └────────┬────────┘    └────────┬────────┘       │
+└───────────┼──────────────────────┼──────────────────────┼────────────────┘
+            └──────────────────────┼──────────────────────┘
+                                   │
+                                   ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                      FASTAPI SERVER (api.py)                              │
+│                         localhost:8000                                    │
+│  ┌────────────────────────────────────────────────────────────────┐      │
+│  │  /v1/chat/completions  │  /v1/models  │  /health  │  /memory/* │      │
+│  └────────────────────────────────────────────────────────────────┘      │
+│                                                                           │
+│  Features:                                                                │
+│  • OpenAI-compatible API          • Conversation memory                   │
+│  • Greeting detection             • Session management                    │
+│  • OpenWebUI integration          • Error handling                        │
+└───────────────────────────────────┬──────────────────────────────────────┘
+                                    │
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                    CREWAI ORCHESTRATION (crew.py)                         │
+│                                                                           │
+│   ┌──────────────┐      ┌──────────────┐      ┌──────────────┐           │
+│   │    Query     │      │   Document   │      │   Insight    │           │
+│   │    Router    │ ───▶ │  Researcher  │ ───▶ │ Synthesizer  │           │
+│   │              │      │              │      │              │           │
+│   │ Routing Tool │      │Retrieval Tool│      │  (No tools)  │           │
+│   └──────────────┘      └──────────────┘      └──────────────┘           │
+│                                                                           │
+│   Process: Sequential    │    Verbose: Off    │    Tracing: Phoenix      │
+└───────────────────────────────────┬──────────────────────────────────────┘
+                                    │
+          ┌─────────────────────────┼─────────────────────────┐
+          │                         │                         │
+          ▼                         ▼                         ▼
+┌──────────────────────┐  ┌──────────────────────┐  ┌──────────────────────┐
+│    OLLAMA (LLM)      │  │  POSTGRESQL+PGVECTOR │  │   ARIZE PHOENIX      │
+│   localhost:11434    │  │   localhost:5432     │  │   localhost:6006     │
+│                      │  │                      │  │                      │
+│  Models:             │  │  • Vector embeddings │  │  • Request tracing   │
+│  • llama3.2 (chat)   │  │    (1024d mxbai)     │  │  • Prompt management │
+│  • mxbai-embed-large │  │  • Hybrid search     │  │  • Token tracking    │
+│    (embeddings)      │  │  • Document metadata │  │  • Latency metrics   │
+└──────────────────────┘  └──────────────────────┘  └──────────────────────┘
+```
+
+---
+
 ## How It Works
 
-This system uses **CrewAI** to orchestrate three specialized AI agents that work sequentially to answer questions from your documents. Unlike simple RAG systems that just retrieve and respond, this agentic approach:
+This system uses **CrewAI** to orchestrate three specialized AI agents that work sequentially to answer questions from your documents. The agentic approach:
 
 1. **Intelligently routes** queries to the most relevant document set
 2. **Retrieves context** using hybrid search (semantic + keyword)
 3. **Synthesizes answers** with proper source citations
 
+### Contextual RAG (Anthropic-style)
+
+Each document chunk is enriched with contextual information during ingestion:
+
 ```
-User Question
-     │
-     ▼
-┌─────────────────┐
-│  Query Router   │  "What document category does this belong to?"
-│     Agent       │
-└────────┬────────┘
-         │ Routing Decision (JSON)
-         ▼
-┌─────────────────┐
-│   Document      │  "Let me search the right documents..."
-│   Researcher    │
-└────────┬────────┘
-         │ Retrieved Chunks
-         ▼
-┌─────────────────┐
-│    Insight      │  "Based on these documents, here's your answer..."
-│   Synthesizer   │
-└────────┬────────┘
-         │
-         ▼
-   Final Answer
-   + Sources
+Original Chunk:               Enriched Chunk:
+┌─────────────────────┐      ┌─────────────────────────────────────────┐
+│ "The employee must  │      │ Context: This chunk is from Article 71 │
+│  submit a leave     │  ──▶ │ of the HR Bylaws, discussing the leave │
+│  request 7 days     │      │ request process for annual leave.      │
+│  in advance..."     │      │                                        │
+└─────────────────────┘      │ "The employee must submit a leave      │
+                             │  request 7 days in advance..."         │
+                             └─────────────────────────────────────────┘
 ```
+
+This contextual enrichment significantly improves retrieval quality.
 
 ---
 
@@ -59,9 +121,7 @@ User Question
 
 **Role:** Analyze queries and determine which documents to search
 
-The Query Router examines each question and decides which document category is most relevant. This prevents searching through irrelevant documents and improves response accuracy.
-
-**Document Categories:**
+Routes queries to:
 | Category | Documents | Example Queries |
 |----------|-----------|-----------------|
 | `hr` | HR Bylaws | "What is the annual leave policy?" |
@@ -70,183 +130,21 @@ The Query Router examines each question and decides which document category is m
 | `procurement_business` | Business Process Manual | "What is the procurement workflow?" |
 | `procurement_standards` | Abu Dhabi Standards | "What are the government regulations?" |
 
-**How it works:**
-```python
-# Keyword scoring determines the route
-hr_keywords = ["leave", "salary", "employee", "benefits", ...]
-infosec_keywords = ["security", "password", "encryption", ...]
-procurement_keywords = ["purchase", "vendor", "contract", ...]
-
-# Highest score wins
-route = "hr" if hr_score > other_scores else ...
-```
-
----
-
 ### Agent 2: Document Researcher
 
-**Role:** Retrieve relevant document chunks using the routing decision
+**Role:** Retrieve relevant document chunks using hybrid search
 
-The Document Researcher uses the routing decision to search only relevant documents. It performs **hybrid search** combining:
-
-- **Semantic search** (vector similarity using embeddings)
-- **Keyword search** (BM25 for exact matches)
-
-**Retrieved chunk format:**
-```
----
-**Source:** Procurement Manual (Business Process).PDF
-**Page:** 45
-**Section Context:** Purchase Requisition Process
-
-The End-User must create a Purchase Requisition (PR) to request
-goods, services, or projects...
----
-```
-
----
+- Receives routing decision from Query Router
+- Performs semantic + keyword search (pgvector + BM25)
+- Returns top-k relevant chunks with metadata
 
 ### Agent 3: Insight Synthesizer
 
 **Role:** Create comprehensive answers with source citations
 
-The Insight Synthesizer takes the retrieved chunks and formulates a professional response that:
-
-- Directly answers the user's question
-- Uses only information from the documents (no hallucination)
-- Includes proper source citations
-- Formats the response appropriately (bullets, paragraphs, etc.)
-
-**Output format:**
-```
-To submit a Purchase Requisition, follow these steps:
-
-1. Navigate to the Requisition module in SAP Ariba
-2. Click "Create Requisition" and select the appropriate category
-3. Fill in the required fields including description and quantity
-4. Submit for approval based on the Delegation of Authority
-
-**Sources:**
-- Procurement Manual (Business Process).PDF (Page 45)
-- Procurement Manual (Ariba Aligned).PDF (Page 132)
-```
-
----
-
-## Workflow Steps
-
-### Step 1: Query Reception
-```
-User: "How do I submit a purchase requisition?"
-```
-The API receives the query via the `/v1/chat/completions` endpoint (OpenAI-compatible).
-
-### Step 2: Pre-processing Checks
-Before invoking the agent crew, the system checks for:
-- **Greetings/chitchat** → Returns friendly response without RAG
-- **OpenWebUI system requests** → Handles title generation, etc.
-
-### Step 3: Query Routing
-```json
-{
-  "route": "procurement_business",
-  "justification": "Query relates to procurement processes (matched 2 keywords)",
-  "query": "How do I submit a purchase requisition?"
-}
-```
-
-### Step 4: Document Retrieval
-The Document Researcher:
-1. Receives the routing decision
-2. Filters documents to `procurement_business` category
-3. Performs hybrid search (semantic + keyword)
-4. Returns top-k relevant chunks with metadata
-
-### Step 5: Answer Synthesis
-The Insight Synthesizer:
-1. Analyzes all retrieved chunks
-2. Extracts relevant information
-3. Formulates a coherent answer
-4. Adds source citations
-
-### Step 6: Response Delivery
-```json
-{
-  "model": "agentic-rag",
-  "choices": [{
-    "message": {
-      "role": "assistant",
-      "content": "To submit a Purchase Requisition..."
-    }
-  }]
-}
-```
-
----
-
-## Architecture
-
-```
-┌──────────────────────────────────────────────────────────────────────┐
-│                         USER INTERFACES                               │
-│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐   │
-│  │    OpenWebUI    │    │   REST Client   │    │       CLI       │   │
-│  │  localhost:3000 │    │    (curl/etc)   │    │    main.py      │   │
-│  └────────┬────────┘    └────────┬────────┘    └────────┬────────┘   │
-└───────────┼──────────────────────┼──────────────────────┼────────────┘
-            │                      │                      │
-            └──────────────────────┼──────────────────────┘
-                                   │
-                                   ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│                      FASTAPI SERVER (api.py)                          │
-│                         localhost:8000                                │
-│  ┌────────────────────────────────────────────────────────────────┐  │
-│  │  /v1/chat/completions  │  /v1/models  │  /health  │  /memory/* │  │
-│  └────────────────────────────────────────────────────────────────┘  │
-│                                                                       │
-│  Features:                                                            │
-│  • OpenAI-compatible API          • Conversation memory               │
-│  • Greeting detection             • Session management                │
-│  • OpenWebUI integration          • Error handling                    │
-└───────────────────────────────────┬──────────────────────────────────┘
-                                    │
-                                    ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│                    CREWAI ORCHESTRATION (crew.py)                     │
-│                                                                       │
-│   ┌──────────────┐      ┌──────────────┐      ┌──────────────┐       │
-│   │    Query     │      │   Document   │      │   Insight    │       │
-│   │    Router    │ ───▶ │  Researcher  │ ───▶ │ Synthesizer  │       │
-│   │              │      │              │      │              │       │
-│   │ Routing Tool │      │Retrieval Tool│      │  (No tools)  │       │
-│   └──────────────┘      └──────────────┘      └──────────────┘       │
-│                                                                       │
-│   Process: Sequential    │    Verbose: Off    │    Tracing: Off      │
-└───────────────────────────────────┬──────────────────────────────────┘
-                                    │
-                    ┌───────────────┴───────────────┐
-                    │                               │
-                    ▼                               ▼
-┌──────────────────────────────┐   ┌──────────────────────────────────┐
-│     POSTGRESQL + PGVECTOR    │   │           OPENAI API             │
-│        localhost:5432        │   │                                  │
-│                              │   │   Model: gpt-4o-mini             │
-│  • Vector embeddings (3072d) │   │   Embeddings: text-embedding-    │
-│  • Hybrid search enabled     │   │               3-large            │
-│  • Document metadata         │   │   Temperature: 0.1               │
-│  • Contextual chunks         │   │                                  │
-└──────────────────────────────┘   └──────────────────────────────────┘
-                    │
-                    ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│                    ARIZE PHOENIX (Observability)                      │
-│                         localhost:6006                                │
-│                                                                       │
-│  • Request tracing            • Latency monitoring                    │
-│  • Token usage tracking       • Agent step visualization              │
-└──────────────────────────────────────────────────────────────────────┘
-```
+- Analyzes retrieved chunks
+- Formulates coherent answers
+- Includes proper source citations (document, page, section)
 
 ---
 
@@ -254,8 +152,9 @@ The Insight Synthesizer:
 
 ### Prerequisites
 
-- Docker Desktop
-- OpenAI API Key
+- Docker Desktop with GPU support (optional but recommended)
+- 16GB+ RAM recommended
+- ~10GB disk space for models
 
 ### 1. Clone and Configure
 
@@ -265,10 +164,6 @@ cd dge
 
 # Create environment file
 cp .env.docker.example .env.docker
-
-# Add your OpenAI API key
-nano .env.docker
-# Set: OPENAI_API_KEY=sk-your-key-here
 ```
 
 ### 2. Start Services
@@ -277,28 +172,40 @@ nano .env.docker
 docker compose up -d
 ```
 
-This starts:
+This starts all services:
 | Service | Port | Description |
 |---------|------|-------------|
+| Ollama | 11434 | Local LLM hosting |
 | PostgreSQL | 5432 | Vector database with pgvector |
 | Arize Phoenix | 6006 | Observability dashboard |
 | RAG API | 8000 | FastAPI server |
 | OpenWebUI | 3000 | Chat interface |
 
-### 3. Verify
+### 3. Wait for Models to Download
 
+The first startup will pull the models (~4GB):
 ```bash
-# Check all containers are running
-docker compose ps
+# Monitor Ollama model download
+docker logs -f ollama_pull
 
-# Check API health
-curl http://localhost:8000/health
-
-# Check available models
-curl http://localhost:8000/v1/models
+# Check if models are ready
+curl http://localhost:11434/api/tags
 ```
 
-### 4. Test
+### 4. Ingest Documents
+
+Place PDF files in `data/raw/` then run:
+```bash
+# From within the container
+docker exec -it crewai_rag_api python -m src.data_ingestion.ingest_docling
+
+# Or with specific options
+docker exec -it crewai_rag_api python -m src.data_ingestion.ingest_docling \
+    --data-dir /app/data/raw \
+    --no-context  # Skip contextual generation (faster)
+```
+
+### 5. Test
 
 **Via curl:**
 ```bash
@@ -314,6 +221,34 @@ curl -X POST http://localhost:8000/v1/chat/completions \
 1. Open http://localhost:3000
 2. Select `agentic-rag` model
 3. Start chatting!
+
+---
+
+## Document Ingestion
+
+### Using Docling
+
+The system uses Docling for superior PDF processing:
+
+```bash
+# Basic ingestion
+python -m src.data_ingestion.ingest_docling
+
+# With options
+python -m src.data_ingestion.ingest_docling \
+    --data-dir ./data/raw \
+    --table-name rag_embeddings_custom \
+    --no-context  # Disable contextual generation
+```
+
+### Document Categories
+
+Place documents in `data/raw/` and name them appropriately:
+- `*HR*` or `*Bylaw*` → HR category
+- `*Security*` or `*InfoSec*` → Information Security
+- `*Ariba*` → Procurement (Ariba)
+- `*Business*Process*` → Procurement (Business)
+- `*Standard*` → Procurement (Standards)
 
 ---
 
@@ -352,26 +287,53 @@ Content-Type: application/json
 
 ---
 
+## Evaluation
+
+The system includes RAGAs-based evaluation:
+
+```bash
+# Create sample test set
+python -m src.evaluation.ragas_eval --create-sample
+
+# Run evaluation
+python -m src.evaluation.ragas_eval --test-file data/evaluation/sample_test_set.json
+```
+
+### Metrics
+
+- **Faithfulness**: Are answers grounded in the context?
+- **Answer Relevancy**: Do answers address the question?
+- **Context Precision**: Is the retrieved context relevant?
+- **Context Recall**: Is all necessary information retrieved?
+
+---
+
 ## Configuration
 
 ### Environment Variables
 
 ```bash
-# Required
-OPENAI_API_KEY=sk-...
+# LLM Provider (ollama or openai)
+LLM_PROVIDER=ollama
 
-# LLM Configuration
-LLM_PROVIDER=openai
-OPENAI_MODEL=gpt-4o-mini
-OPENAI_EMBEDDING_MODEL=text-embedding-3-large
+# Ollama Configuration
+OLLAMA_BASE_URL=http://ollama:11434
+OLLAMA_MODEL=llama3.2
+OLLAMA_EMBEDDING_MODEL=mxbai-embed-large
 
 # Database (auto-configured in Docker)
-DATABASE_URL=postgresql://postgres:postgres_password@localhost:5432/rag_db
+DATABASE_URL=postgresql://postgres:postgres_password@postgres:5432/rag_db
+
+# Embedding Configuration
+EMBED_DIM=1024  # 1024 for mxbai-embed-large
 
 # RAG Settings
-EMBED_DIM=3072
 RETRIEVAL_TOP_K=5
 CHUNK_SIZE=512
+ENABLE_HYBRID_SEARCH=true
+
+# Contextual RAG
+CONTEXT_GENERATION_ENABLED=true
 ```
 
 ---
@@ -388,11 +350,20 @@ dge/
 │   ├── config/
 │   │   └── settings.py       # Configuration management
 │   │
+│   ├── data_ingestion/
+│   │   ├── __init__.py
+│   │   └── ingest_docling.py # Docling-based ingestion with contextual RAG
+│   │
+│   ├── evaluation/
+│   │   ├── __init__.py
+│   │   └── ragas_eval.py     # RAGAs evaluation framework
+│   │
 │   └── rag_system/
 │       ├── agents.py         # Three AI agent definitions
 │       ├── crew.py           # CrewAI workflow orchestration
 │       ├── memory.py         # Conversation memory system
-│       └── tools.py          # Routing and retrieval tools
+│       ├── tools.py          # Routing and retrieval tools
+│       └── phoenix_prompts.py # Prompt management
 │
 ├── docker-compose.yml        # Docker services configuration
 ├── Dockerfile                # API container definition
@@ -405,8 +376,11 @@ dge/
 ├── .env.example              # Environment template (local)
 ├── .env.docker.example       # Environment template (Docker)
 │
-└── data/                     # Document storage
-    └── raw/                  # Place PDF documents here
+└── data/
+    ├── raw/                  # Place PDF documents here
+    ├── processed/            # Processed documents
+    ├── evaluation/           # Evaluation test sets and results
+    └── prompts/              # Stored prompts (auto-generated)
 ```
 
 ---
@@ -418,6 +392,7 @@ dge/
 ```bash
 # View logs
 docker logs crewai_rag_api --tail 50
+docker logs ollama --tail 50
 
 # Rebuild API
 docker compose up -d --no-deps --build rag-api
@@ -426,25 +401,52 @@ docker compose up -d --no-deps --build rag-api
 docker compose restart
 ```
 
+### Ollama Model Issues
+
+```bash
+# Check available models
+curl http://localhost:11434/api/tags
+
+# Manually pull a model
+docker exec -it ollama ollama pull llama3.2
+
+# Check Ollama status
+docker exec -it ollama ollama list
+```
+
 ### Database Issues
 
 ```bash
 # Run diagnostics
 python diagnose_db.py
 
-# Check database connection
-docker compose exec postgres psql -U postgres -d rag_db -c "SELECT COUNT(*) FROM rag_embeddings_openai;"
+# Check embeddings table
+docker compose exec postgres psql -U postgres -d rag_db \
+  -c "SELECT COUNT(*) FROM rag_embeddings_ollama;"
 ```
 
-### API Issues
+### GPU Issues
 
-```bash
-# Check if API is responding
-curl http://localhost:8000/health
-
-# Check configuration
-curl http://localhost:8000/config
+If running without GPU, remove the GPU reservation from `docker-compose.yml`:
+```yaml
+# Remove or comment out this section in the ollama service:
+deploy:
+  resources:
+    reservations:
+      devices:
+        - driver: nvidia
+          count: all
+          capabilities: [gpu]
 ```
+
+---
+
+## Performance Tips
+
+1. **Use GPU**: Ollama performs significantly better with GPU support
+2. **Adjust chunk size**: Larger chunks = fewer calls, smaller = better precision
+3. **Disable context generation**: Use `--no-context` for faster ingestion
+4. **Tune retrieval**: Adjust `RETRIEVAL_TOP_K` based on your needs
 
 ---
 

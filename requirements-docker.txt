@@ -1,27 +1,69 @@
+# ===========================================
+# Core LlamaIndex
+# ===========================================
 llama-index
+llama-index-core
+
+# ===========================================
+# Document Processing - Docling
+# ===========================================
 llama-index-readers-docling
+docling
+
+# ===========================================
+# Ollama Integration (Open Source LLM)
+# ===========================================
 llama-index-embeddings-ollama
 llama-index-llms-ollama
+
+# ===========================================
+# OpenAI Integration (Optional)
+# ===========================================
+llama-index-embeddings-openai
+llama-index-llms-openai
+
+# ===========================================
+# Vector Store - PostgreSQL + pgvector
+# ===========================================
 llama-index-vector-stores-postgres
 llama-index-storage-docstore-postgres
-python-dotenv
 psycopg2-binary==2.9.9
-crewai
-crewai-tools
-# Removed ragas and datasets due to NumPy conflicts in Docker
-# ragas
-# datasets
+
+# ===========================================
+# Search - Hybrid (Semantic + BM25)
+# ===========================================
 rank_bm25
 llama-index-retrievers-bm25
-sentencepiece
-# Removed MLX model dependency for lighter Docker image
-# docling-ibm-models[mlx]
-fastapi
-uvicorn
-# Phoenix tracing packages
+
+# ===========================================
+# CrewAI - Multi-Agent Orchestration
+# ===========================================
+crewai
+crewai-tools
+
+# ===========================================
+# RAGAs - Evaluation Framework
+# ===========================================
+ragas
+datasets
+
+# ===========================================
+# Arize Phoenix - Observability
+# ===========================================
 arize-phoenix
 arize-phoenix-otel
 openinference-instrumentation-crewai
 openinference-instrumentation-litellm
-# Pin numpy to avoid conflicts
+
+# ===========================================
+# Web Framework
+# ===========================================
+fastapi
+uvicorn
+python-dotenv
+
+# ===========================================
+# Utilities
+# ===========================================
+sentencepiece
 numpy<2

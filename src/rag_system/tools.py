@@ -321,8 +321,9 @@ def document_retrieval_tool(query: Union[str, Dict[str, Any]], routing_info: Opt
               f"user: {db_url_parts.username}")
 
         # Initialize the vector store with connection details and hybrid search enabled
-        # Table name will be dynamically determined based on available tables
-        table_name = os.getenv("VECTOR_TABLE_NAME", "rag_embeddings_openai")
+        # Table name dynamically determined based on LLM provider
+        default_table = f"rag_embeddings_{LLM_PROVIDER}"
+        table_name = os.getenv("VECTOR_TABLE_NAME", default_table)
 
         vector_store = PGVectorStore.from_params(
             host=db_url_parts.hostname,

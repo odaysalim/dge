@@ -32,7 +32,7 @@ DB_PORT = int(os.getenv("DB_PORT", "5432"))
 DB_NAME = os.getenv("DB_NAME", "rag_db")
 
 # LLM Provider Configuration
-LLM_PROVIDER: Literal["openai", "ollama"] = os.getenv("LLM_PROVIDER", "openai")
+LLM_PROVIDER: Literal["openai", "ollama"] = os.getenv("LLM_PROVIDER", "ollama")
 
 # OpenAI Configuration
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -41,15 +41,16 @@ OPENAI_EMBEDDING_MODEL = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-l
 OPENAI_TEMPERATURE = float(os.getenv("OPENAI_TEMPERATURE", "0.1"))
 OPENAI_MAX_TOKENS = int(os.getenv("OPENAI_MAX_TOKENS", "4096"))
 
-# Ollama Configuration (for later migration)
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma3:4b")
-OLLAMA_EMBEDDING_MODEL = os.getenv("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text:v1.5")
+# Ollama Configuration
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://ollama:11434")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2")
+OLLAMA_EMBEDDING_MODEL = os.getenv("OLLAMA_EMBEDDING_MODEL", "mxbai-embed-large")
 OLLAMA_TEMPERATURE = float(os.getenv("OLLAMA_TEMPERATURE", "0.1"))
 OLLAMA_MAX_TOKENS = int(os.getenv("OLLAMA_MAX_TOKENS", "131072"))
 
 # Embedding Configuration
-EMBED_DIM = int(os.getenv("EMBED_DIM", "3072"))  # 3072 for text-embedding-3-large, 768 for nomic
+# 3072 for text-embedding-3-large (OpenAI), 1024 for mxbai-embed-large (Ollama), 768 for nomic
+EMBED_DIM = int(os.getenv("EMBED_DIM", "1024" if LLM_PROVIDER == "ollama" else "3072"))
 
 # RAG Configuration
 RETRIEVAL_TOP_K = int(os.getenv("RETRIEVAL_TOP_K", "5"))
@@ -105,11 +106,14 @@ def validate_config():
     if LLM_PROVIDER == "openai" and not OPENAI_API_KEY:
         errors.append("OPENAI_API_KEY is required when LLM_PROVIDER is 'openai'")
 
+    if LLM_PROVIDER == "ollama" and not OLLAMA_BASE_URL:
+        errors.append("OLLAMA_BASE_URL is required when LLM_PROVIDER is 'ollama'")
+
     if not DATABASE_URL:
         errors.append("DATABASE_URL is required")
 
-    if EMBED_DIM not in [768, 1536, 3072]:
-        errors.append(f"EMBED_DIM must be 768, 1536, or 3072, got {EMBED_DIM}")
+    if EMBED_DIM not in [768, 1024, 1536, 3072]:
+        errors.append(f"EMBED_DIM must be 768, 1024, 1536, or 3072, got {EMBED_DIM}")
 
     if errors:
         raise ValueError(f"Configuration validation failed:\n" + "\n".join(errors))

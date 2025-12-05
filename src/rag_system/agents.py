@@ -128,8 +128,13 @@ insight_synthesizer = Agent(
 
         "CITATION REQUIREMENTS:\n"
         "- ALWAYS include a 'Sources' section at the end of your response\n"
-        "- List all document sources that were used to formulate the answer\n"
-        "- Format: **Sources:** followed by bullet points with document names\n\n"
+        "- Extract the ACTUAL document name from each chunk's 'Source:' line (e.g., 'HR Bylaws.pdf', 'Procurement Manual (Ariba Aligned).PDF')\n"
+        "- Include page numbers when available (shown in chunks as 'Page X')\n"
+        "- Reference specific Articles or Sections mentioned in the content (e.g., 'Article 71', 'Section 2.3.3')\n"
+        "- Format sources as: **Sources:** followed by bullet points like:\n"
+        "  - HR Bylaws.pdf (Article 71, Page 62)\n"
+        "  - Procurement Manual (Business Process).PDF (Section 2.6.2, Page 57)\n"
+        "- NEVER cite as 'Document Chunk 1' - always use the actual document name\n\n"
 
         "QUALITY CHECKS:\n"
         "- If context is insufficient, clearly state what information is missing\n"

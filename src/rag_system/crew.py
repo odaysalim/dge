@@ -22,7 +22,7 @@ def create_rag_crew(query: str):
         description=(
             f"You received a routing decision from the Query Router. Now you MUST:\n"
             f"1. Use the Document Retrieval Tool to search for: '{query}'\n"
-            f"2. Pass the routing decision JSON from {routing_task} as the 'routing_info' parameter\n"
+            f"2. Pass the routing decision JSON from the previous task as the 'routing_info' parameter\n"
             f"3. Return ONLY the document chunks retrieved by the tool\n\n"
             f"DO NOT return the routing JSON. DO NOT skip calling the tool. "
             f"Your job is to retrieve document chunks using the tool."
@@ -35,7 +35,7 @@ def create_rag_crew(query: str):
     # Task for the Insight Synthesizer agent
     # This task takes the context from the first task and focuses on crafting the answer.
     synthesis_task = Task(
-        description=f"Analyze the provided document context from {research_task} and formulate a comprehensive and accurate answer to the user's original question: '{query}'.",
+        description=f"Analyze the provided document context from the Document Researcher and formulate a comprehensive and accurate answer to the user's original question: '{query}'.",
         expected_output="""A professional, well-structured response that directly answers the user's question. Format the response naturally and appropriately based on the content:
 
 Guidelines for response formatting:

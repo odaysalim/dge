@@ -380,6 +380,12 @@ if __name__ == "__main__":
         help="Directory containing PDF files (default: data/raw)"
     )
     parser.add_argument(
+        "--file",
+        type=str,
+        default=None,
+        help="Single PDF file to ingest (overrides --data-dir)"
+    )
+    parser.add_argument(
         "--table-name",
         type=str,
         default=None,
@@ -411,11 +417,39 @@ if __name__ == "__main__":
     logger.info(f"Context Generation: {not args.no_context}")
     logger.info("=" * 60)
 
-    count = ingest_documents(
-        data_dir=args.data_dir,
-        table_name=args.table_name,
-        generate_context=not args.no_context
-    )
+    # Single file ingestion
+    if args.file:
+        file_path = Path(args.file)
+        if not file_path.exists():
+            logger.error(f"File not found: {args.file}")
+            exit(1)
+
+        logger.info(f"Ingesting single file: {file_path.name}")
+        ingester = DocumentIngester(
+            data_dir=file_path.parent,
+            table_name=args.table_name,
+            generate_context=not args.no_context
+        )
+        nodes = ingester.process_document(file_path)
+
+        if nodes:
+            # Store nodes in vector store
+            index = VectorStoreIndex(
+                nodes=nodes,
+                vector_store=ingester.vector_store,
+                embed_model=ingester.embed_model,
+                show_progress=True
+            )
+            count = len(nodes)
+        else:
+            count = 0
+    else:
+        # Directory ingestion
+        count = ingest_documents(
+            data_dir=args.data_dir,
+            table_name=args.table_name,
+            generate_context=not args.no_context
+        )
 
     logger.info("=" * 60)
     logger.info(f"Ingestion complete! Total nodes: {count}")

@@ -37,8 +37,8 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
-        echo "Pulling Llama 3.2 model..."
-        curl -X POST http://ollama:11434/api/pull -d '{"name": "llama3.2"}'
+        echo "Pulling Llama 3.2 1B model (smaller/faster)..."
+        curl -X POST http://ollama:11434/api/pull -d '{"name": "llama3.2:1b"}'
         echo "Pulling mxbai-embed-large embedding model..."
         curl -X POST http://ollama:11434/api/pull -d '{"name": "mxbai-embed-large"}'
         echo "Models pulled successfully!"

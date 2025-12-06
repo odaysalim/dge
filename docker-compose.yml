@@ -68,7 +68,7 @@ services:
     networks:
       - rag-network
 
-  # Arize Phoenix - Observability & Tracing
+  # Arize Phoenix - Observability & Tracing (optional)
   phoenix:
     image: arizephoenix/phoenix:latest
     container_name: arize_phoenix
@@ -80,12 +80,6 @@ services:
       - PHOENIX_WORKING_DIR=/phoenix-data
     volumes:
       - phoenix_data:/phoenix-data
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:6006')\" || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
     restart: unless-stopped
     networks:
       - rag-network
@@ -114,7 +108,7 @@ services:
       postgres:
         condition: service_healthy
       phoenix:
-        condition: service_healthy
+        condition: service_started
       ollama:
         condition: service_healthy
     restart: unless-stopped

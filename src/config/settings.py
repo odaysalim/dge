@@ -108,8 +108,8 @@ def validate_config():
     if not DATABASE_URL:
         errors.append("DATABASE_URL is required")
 
-    if EMBED_DIM not in [768, 1536, 3072]:
-        errors.append(f"EMBED_DIM must be 768, 1536, or 3072, got {EMBED_DIM}")
+    if EMBED_DIM not in [768, 1024, 1536, 3072]:
+        errors.append(f"EMBED_DIM must be 768, 1024, 1536, or 3072, got {EMBED_DIM}")
 
     if errors:
         raise ValueError(f"Configuration validation failed:\n" + "\n".join(errors))

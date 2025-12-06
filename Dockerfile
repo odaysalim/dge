@@ -7,11 +7,17 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 # Set the working directory in the container
 WORKDIR /app
 
-# Install system dependencies required for building packages
+# Install system dependencies required for building packages and Docling
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     build-essential \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Configure uv to use system Python (required for Docker)

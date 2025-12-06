@@ -98,7 +98,6 @@ services:
       - PHOENIX_HOST=phoenix
       # Ollama configuration (within Docker network)
       - OLLAMA_BASE_URL=http://ollama:11434
-      - LLM_PROVIDER=${LLM_PROVIDER:-ollama}
       # Disable CrewAI interactive prompts that block the API
       - CREWAI_TELEMETRY_OPT_OUT=true
       - CREWAI_TRACING_ENABLED=false
